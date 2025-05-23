@@ -5,11 +5,14 @@ using System.IO;
 using System.Text;
 using TMPro;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
 using Button = UnityEngine.UI.Button;
 using File = UnityEngine.Windows.File;
 using Image = UnityEngine.UI.Image;
+using Object = UnityEngine.Object;
 using Toggle = UnityEngine.UI.Toggle;
 
 public enum EGenerateType
@@ -67,6 +70,64 @@ public class GenerateUIWindow : EditorWindow
         GenPanelView();
     }
     
+    [MenuItem("Tools/生成UI文件目录指定")]
+    public static void GenerateUISettings()
+    {
+        GetWindow<GenerateUIWindow>();
+    }
+
+    public static Object PanelCodeGenDir;
+    public static Object ViewCodeGenDir;
+    public static Object UIScriptsRoot;
+    
+    public static string UIGeneratorSettingsPath = Application.dataPath + "/Settings/UIGeneratorSettings.txt";
+
+    public void CreateGUI()
+    {
+        string text = "";
+        
+        if (File.Exists(UIGeneratorSettingsPath))
+        {
+            text = System.IO.File.ReadAllText(UIGeneratorSettingsPath);
+            File.Delete(UIGeneratorSettingsPath);
+        }
+        
+        if (!string.IsNullOrEmpty(text))
+        {
+            string[] paths = text.Split('|');
+            if (paths.Length >= 1)
+            {
+                PanelCodeGenDir = AssetDatabase.LoadAssetAtPath<DefaultAsset>(paths[0]);
+            }
+            else if (paths.Length >= 2)
+            {
+                ViewCodeGenDir = AssetDatabase.LoadAssetAtPath<DefaultAsset>(paths[1]);
+            }
+            else if (paths.Length >= 3)
+            {
+                UIScriptsRoot = AssetDatabase.LoadAssetAtPath<DefaultAsset>(paths[2]);
+            }
+        }
+    }
+
+    public void OnGUI()
+    {
+        PanelCodeGenDir = EditorGUILayout.ObjectField("Panel生成不需要更改的代码目录", PanelCodeGenDir, typeof(Object), false);
+        ViewCodeGenDir = EditorGUILayout.ObjectField("View生成不需要更改的代码目录", ViewCodeGenDir, typeof(Object), false);
+        UIScriptsRoot = EditorGUILayout.ObjectField("UI脚本需要更改的根目录", UIScriptsRoot, typeof(Object), false);
+    }
+
+    private void OnDestroy()
+    {
+        SavePathSettingFile();
+    }
+
+    private void SavePathSettingFile()
+    {
+        string content = AssetDatabase.GetAssetPath(PanelCodeGenDir) + "|" + AssetDatabase.GetAssetPath(ViewCodeGenDir) + "|" + AssetDatabase.GetAssetPath(UIScriptsRoot);
+        System.IO.File.WriteAllText(UIGeneratorSettingsPath, content, System.Text.Encoding.UTF8);
+    }
+
     // [MenuItem("Assets/GenUI/Cell")]
     // public static void GenEnhancedCellView()
     // {
@@ -84,6 +145,12 @@ public class GenerateUIWindow : EditorWindow
         if (!PrefabUtility.IsPartOfPrefabAsset(Selection.activeGameObject))
         {
             Debug.LogError("请选择一个Prefab！");
+            return;
+        }
+
+        if (PanelCodeGenDir == null || ViewCodeGenDir == null || UIScriptsRoot)
+        {
+            Debug.LogError("请在工具栏选择Tools/生成UI文件目录指定，填写好UI代码根路径，和要生成的Prefab代码保存路径，View代码保存路径");
             return;
         }
         
@@ -562,10 +629,10 @@ public class GenerateUIWindow : EditorWindow
         return resStr;
     }
 
-    private static string PanelGenDirPath = System.IO.Path.GetFullPath(Application.dataPath + "/Scripts/Hotfix/Logic/GameUI/Generate/UIPanel/");
-    private static string PanelDirPath = System.IO.Path.GetFullPath(Application.dataPath + "/Scripts/Hotfix/Logic/GameUI/UI/{0}/Panel/");
-    private static string ViewGenDirPath = System.IO.Path.GetFullPath(Application.dataPath + "/Scripts/Hotfix/Logic/GameUI/Generate/UIView/");
-    private static string ViewDirPath = System.IO.Path.GetFullPath(Application.dataPath + "/Scripts/Hotfix/Logic/GameUI/UI/{0}/View/");
+    private static string PanelGenDirPath = System.IO.Path.GetFullPath(Application.dataPath + "../" + AssetDatabase.GetAssetPath(PanelCodeGenDir));
+    private static string PanelDirPath = System.IO.Path.GetFullPath(Application.dataPath + "../" + AssetDatabase.GetAssetPath(UIScriptsRoot) +  "/{0}/Panel/");
+    private static string ViewGenDirPath = System.IO.Path.GetFullPath(Application.dataPath + "../" + AssetDatabase.GetAssetPath(ViewCodeGenDir));
+    private static string ViewDirPath = System.IO.Path.GetFullPath(Application.dataPath + "../" + AssetDatabase.GetAssetPath(UIScriptsRoot) + "/{0}/View/");
     private static string AdapterDirPath = System.IO.Path.GetFullPath(Application.dataPath + "/Scripts/Hotfix/Logic/GameUI/ScrollAdapter/");
     private static string CellGenDirPath = System.IO.Path.GetFullPath(Application.dataPath + "/Scripts/Hotfix/Logic/GameUI/Generate/Cell/");
     private static string CellDirPath = System.IO.Path.GetFullPath(Application.dataPath + "/Scripts/Hotfix/Logic/GameUI/Cell/");
