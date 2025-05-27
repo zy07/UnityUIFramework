@@ -1,1 +1,1 @@
-﻿Assets/Frameworks|Assets/Plugins|Assets/Scenes
+﻿Assets/Scripts/GameTest/UI/Gen/Panel|Assets/Scripts/GameTest/UI/Gen/View|Assets/Scripts/GameTest/UI
